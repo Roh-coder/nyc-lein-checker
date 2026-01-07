@@ -1,433 +1,540 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>NYC Tax Lien Candidates by Borough</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
-    .row { margin: 12px 0; }
-    input[type="text"], select { width: 560px; max-width: 100%; padding: 8px; }
-    button { padding: 10px 14px; cursor: pointer; }
-    pre { background: #f6f8fa; padding: 12px; border-radius: 8px; overflow: auto; }
-    .small { color: #555; font-size: 0.92em; line-height: 1.4; }
-    .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .card { border: 1px solid #e6e6e6; border-radius: 10px; padding: 12px; background: #fff; }
-    .stat { display: inline-block; margin-right: 18px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    ul { margin: 10px 0 0 0; padding-left: 18px; }
-    li { margin: 3px 0; }
-    .muted { color: #666; }
-  </style>
+    <meta charset="utf-8" />
+    <title>NYC Tax Lien Candidates by Borough</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            margin: 24px;
+        }
+
+        .row {
+            margin: 12px 0;
+        }
+
+        input[type="text"], select {
+            width: 560px;
+            max-width: 100%;
+            padding: 8px;
+        }
+
+        button {
+            padding: 10px 14px;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f6f8fa;
+            padding: 12px;
+            border-radius: 8px;
+            overflow: auto;
+        }
+
+        .small {
+            color: #555;
+            font-size: 0.92em;
+            line-height: 1.4;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .card {
+            border: 1px solid #e6e6e6;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .stat {
+            display: inline-block;
+            margin-right: 18px;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        ul {
+            margin: 10px 0 0 0;
+            padding-left: 18px;
+        }
+
+        li {
+            margin: 3px 0;
+        }
+
+        .muted {
+            color: #666;
+        }
+    </style>
 </head>
 <body>
-  <h2>NYC Tax Lien Candidates by Borough</h2>
-  <p class="small">
-    Computes: <span class="mono">PLUTO addresses (selected borough)</span> ∩
-    <span class="mono">latest DOF Tax Lien list (by Month)</span>, then displays matches.
-    <br><br>
-    Notes:
-  <ul class="small">
-      <li>Address+ZIP matching can miss matches due to formatting differences.</li>
-      <li>The lien list is a snapshot for the dataset’s latest <span class="mono">month</span> value, not a real-time lien status check.</li>
-    </ul>
-  </p>
+    <h2>NYC Tax Lien Candidates by Borough</h2>
+    <p class="small">
+        Computes: <span class="mono">PLUTO addresses (selected borough)</span> ∩
+        <span class="mono">latest DOF Tax Lien list (by Month)</span>, then displays matches.
+        <br><br>
+        Notes:
+        <ul class="small">
+            <li>Address+ZIP matching can miss matches due to formatting differences.</li>
+            <li>The lien list is a snapshot for the dataset’s latest <span class="mono">month</span> value, not a real-time lien status check.</li>
+        </ul>
+    </p>
 
-  <div class="grid">
-    <div class="card">
-      <div class="row">
-        <label>
-          Borough:
-          <br />
-          <select id="boroughSelect">
-            <option value="1">Manhattan (BoroCode 1)</option>
-            <option value="2">Bronx (BoroCode 2)</option>
-            <option value="3">Brooklyn (BoroCode 3)</option>
-            <option value="4">Queens (BoroCode 4)</option>
-            <option value="5" selected>Staten Island (BoroCode 5)</option>
-          </select>
-        </label>
-      </div>
+    <div class="grid">
+        <div class="card">
+            <div class="row">
+                <label>
+                    Borough:
+                    <br />
+                    <select id="boroughSelect">
+                        <option value="1">Manhattan (BoroCode 1)</option>
+                        <option value="2">Bronx (BoroCode 2)</option>
+                        <option value="3">Brooklyn (BoroCode 3)</option>
+                        <option value="4">Queens (BoroCode 4)</option>
+                        <option value="5" selected>Staten Island (BoroCode 5)</option>
+                    </select>
+                </label>
+            </div>
 
-      <div class="row">
-        <label>
-          Socrata App Token (optional, recommended to reduce rate limits):
-          <br />
-          <input id="token" type="text" placeholder="Paste X-App-Token here (optional)" />
-        </label>
-      </div>
+            <div class="row">
+                <label>
+                    Socrata App Token (optional, recommended to reduce rate limits):
+                    <br />
+                    <input id="token" type="text" placeholder="Paste X-App-Token here (optional)" />
+                </label>
+            </div>
 
-      <div class="row">
-        <label>
-          Additional PLUTO columns to display (Ctrl/Cmd-click for multiple):
-          <br />
-          <select id="plutoCols" multiple size="10" disabled></select>
-        </label>
-        <div class="small muted" id="plutoColsStatus">Loading PLUTO columns…</div>
-      </div>
+            <div class="row">
+                <label>
+                    Additional PLUTO columns to display (Ctrl/Cmd-click for multiple):
+                    <br />
+                    <select id="plutoCols" multiple size="9" disabled></select>
+                </label>
+                <div class="small muted" id="plutoColsStatus">Loading PLUTO columns…</div>
+            </div>
 
-      <div class="row">
-        <button id="runBtn">Run</button>
-      </div>
+            <div class="row">
+                <label>
+                    Additional Tax Lien columns to display (Ctrl/Cmd-click for multiple):
+                    <br />
+                    <select id="lienCols" multiple size="9" disabled></select>
+                </label>
+                <div class="small muted" id="lienColsStatus">Loading Tax Lien columns…</div>
+            </div>
 
-      <div class="row small muted" id="stats">
-        <span class="stat"><strong>Selected borough:</strong> <span id="boroLabel">—</span></span>
-        <span class="stat"><strong>PLUTO unique:</strong> <span id="plutoCount">—</span></span>
-        <span class="stat"><strong>Latest lien month:</strong> <span id="latestMonth">—</span></span>
-        <span class="stat"><strong>Lien unique:</strong> <span id="lienCount">—</span></span>
-        <span class="stat"><strong>Intersection:</strong> <span id="bothCount">—</span></span>
-      </div>
+            <div class="row">
+                <button id="runBtn">Run</button>
+            </div>
 
-      <div class="row">
-        <pre id="log">Ready.</pre>
-      </div>
+            <div class="row small muted" id="stats">
+                <span class="stat"><strong>Selected borough:</strong> <span id="boroLabel">—</span></span>
+                <span class="stat"><strong>PLUTO unique:</strong> <span id="plutoCount">—</span></span>
+                <span class="stat"><strong>Latest lien month:</strong> <span id="latestMonth">—</span></span>
+                <span class="stat"><strong>Lien unique:</strong> <span id="lienCount">—</span></span>
+                <span class="stat"><strong>Intersection:</strong> <span id="bothCount">—</span></span>
+            </div>
+
+            <div class="row">
+                <pre id="log">Ready.</pre>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="row">
+                <label>
+                    Filter results:
+                    <br />
+                    <input id="filterBox" type="text" placeholder="Type to filter (e.g., 'HYLAN', '10453', 'AVENUE')"
+                           disabled />
+                </label>
+            </div>
+
+            <div class="row small muted">
+                Showing <span id="shownCount">0</span> of <span id="totalCount">0</span>
+            </div>
+
+            <div class="row" id="resultsWrap">
+                <ul id="results"></ul>
+            </div>
+        </div>
     </div>
 
-    <div class="card">
-      <div class="row">
-        <label>
-          Filter results:
-          <br />
-          <input id="filterBox" type="text" placeholder="Type to filter (e.g., 'HYLAN', '10453', 'AVENUE')"
-                 disabled />
-        </label>
-      </div>
+    <script>
+(() => {
+            const BASE = "https://data.cityofnewyork.us/resource";
+            const PLUTO_ID = "64uk-42ks"; // PLUTO
+            const LIEN_ID = "9rz4-mjek"; // DOF Tax Lien Sale Lists
 
-      <div class="row small muted">
-        Showing <span id="shownCount">0</span> of <span id="totalCount">0</span>
-      </div>
+            const logEl = document.getElementById("log");
+            const boroSelect = document.getElementById("boroughSelect");
+            const boroLabelEl = document.getElementById("boroLabel");
+            const plutoCountEl = document.getElementById("plutoCount");
+            const lienCountEl = document.getElementById("lienCount");
+            const bothCountEl = document.getElementById("bothCount");
+            const latestMonthEl = document.getElementById("latestMonth");
 
-      <div class="row" id="resultsWrap">
-        <ul id="results"></ul>
-      </div>
-    </div>
-  </div>
+            const filterBox = document.getElementById("filterBox");
+            const resultsUl = document.getElementById("results");
+            const shownCountEl = document.getElementById("shownCount");
+            const totalCountEl = document.getElementById("totalCount");
 
-  <script>
-    (() => {
-      const BASE = "https://data.cityofnewyork.us/resource";
-      const PLUTO_ID = "64uk-42ks"; // PLUTO
-      const LIEN_ID  = "9rz4-mjek"; // DOF Tax Lien Sale Lists
+            const plutoColsSelect = document.getElementById("plutoCols");
+            const plutoColsStatus = document.getElementById("plutoColsStatus");
 
-      const logEl = document.getElementById("log");
-      const boroSelect = document.getElementById("boroughSelect");
-      const boroLabelEl = document.getElementById("boroLabel");
-      const plutoCountEl = document.getElementById("plutoCount");
-      const lienCountEl = document.getElementById("lienCount");
-      const bothCountEl = document.getElementById("bothCount");
-      const latestMonthEl = document.getElementById("latestMonth");
+            const lienColsSelect = document.getElementById("lienCols");
+            const lienColsStatus = document.getElementById("lienColsStatus");
 
-      const filterBox = document.getElementById("filterBox");
-      const resultsUl = document.getElementById("results");
-      const shownCountEl = document.getElementById("shownCount");
-      const totalCountEl = document.getElementById("totalCount");
+            let finalList = [];
 
-      const plutoColsSelect = document.getElementById("plutoCols");
-      const plutoColsStatus = document.getElementById("plutoColsStatus");
-
-      let finalList = [];
-
-      function resetLog() { logEl.textContent = ""; }
-      function log(msg) {
-        logEl.textContent += (logEl.textContent.endsWith("\n") || logEl.textContent === "" ? "" : "\n") + msg + "\n";
-        logEl.scrollTop = logEl.scrollHeight;
-      }
-
-      function cleanSpaces(s) {
-        return String(s ?? "").replace(/\s+/g, " ").trim();
-      }
-
-      function normalizeZip(z) {
-        const s = cleanSpaces(z);
-        const m = s.match(/(\d{5})/);
-        return m ? m[1] : s;
-      }
-
-      function headers(token) {
-        const h = {};
-        if (token) h["X-App-Token"] = token;
-        return h;
-      }
-
-      async function fetchJson(url, token) {
-        const r = await fetch(url, { headers: headers(token) });
-        if (!r.ok) {
-          const t = await r.text();
-          throw new Error(`HTTP ${r.status} for ${url}\n${t.slice(0, 1200)}`);
-        }
-        return await r.json();
-      }
-
-      async function sodaGetAll(datasetId, select, where, token, limit = 50000) {
-        const rows = [];
-        for (let offset = 0;; offset += limit) {
-          const params = new URLSearchParams();
-          params.set("$select", select);
-          params.set("$limit", String(limit));
-          params.set("$offset", String(offset));
-          if (where) params.set("$where", where);
-
-          const url = `${BASE}/${datasetId}.json?${params.toString()}`;
-          const batch = await fetchJson(url, token);
-          if (!Array.isArray(batch) || batch.length === 0) break;
-
-          rows.push(...batch);
-          log(`Fetched ${batch.length} rows (offset ${offset}) from ${datasetId}...`);
-          await new Promise(res => setTimeout(res, 150));
-        }
-        return rows;
-      }
-
-      async function sodaGetDistinct(datasetId, field, token) {
-        const params = new URLSearchParams();
-        params.set("$select", `distinct ${field}`);
-        params.set("$limit", "50000");
-        const url = `${BASE}/${datasetId}.json?${params.toString()}`;
-        return await fetchJson(url, token);
-      }
-
-      function parseDateOrNull(s) {
-        const d = new Date(s);
-        return isNaN(d.getTime()) ? null : d;
-      }
-
-      function escapeSocrataStringLiteral(s) {
-        return String(s).replace(/'/g, "''");
-      }
-
-      function boroughLabel(code) {
-        switch (String(code)) {
-          case "1": return "Manhattan (1)";
-          case "2": return "Bronx (2)";
-          case "3": return "Brooklyn (3)";
-          case "4": return "Queens (4)";
-          case "5": return "Staten Island (5)";
-          default:  return `BoroCode ${code}`;
-        }
-      }
-
-      function renderList(list, filterText) {
-        const q = cleanSpaces(filterText).toUpperCase();
-        resultsUl.innerHTML = "";
-
-        let shown = 0;
-        const maxRender = 2000;
-
-        for (const item of list) {
-          if (q && !item.toUpperCase().includes(q)) continue;
-          if (shown >= maxRender) break;
-
-          const li = document.createElement("li");
-          li.textContent = item;
-          resultsUl.appendChild(li);
-          shown++;
-        }
-
-        shownCountEl.textContent = String(shown);
-        totalCountEl.textContent = String(list.length);
-
-        if (q && shown === 0) {
-          const li = document.createElement("li");
-          li.className = "muted";
-          li.textContent = "No matches for the current filter.";
-          resultsUl.appendChild(li);
-        }
-
-        if (shown >= maxRender) {
-          const li = document.createElement("li");
-          li.className = "muted";
-          li.textContent = `Showing first ${maxRender} matches. Narrow the filter to see more.`;
-          resultsUl.appendChild(li);
-        }
-      }
-
-      async function loadPlutoColumns() {
-        // Socrata Views API: dataset metadata including columns[]
-        const url = "https://data.cityofnewyork.us/api/views/64uk-42ks.json";
-
-        try {
-          plutoColsStatus.textContent = "Loading PLUTO columns…";
-          plutoColsSelect.disabled = true;
-          plutoColsSelect.innerHTML = "";
-
-          const meta = await fetchJson(url, /*token*/ "");
-          const cols = Array.isArray(meta.columns) ? meta.columns : [];
-
-          // Base fields already used by the app (don't offer these as “extra”)
-          const base = new Set(["address", "zipcode", "borocode"]);
-
-          // Exclude system/internal fields like :id, :created_at, etc.
-          const choices = cols
-            .map(c => ({
-              field: String(c.fieldName ?? "").trim(),
-              label: String(c.name ?? c.fieldName ?? "").trim()
-            }))
-            .filter(c => c.field && !c.field.startsWith(":") && !base.has(c.field))
-            .sort((a, b) => a.label.localeCompare(b.label));
-
-          for (const c of choices) {
-            const opt = document.createElement("option");
-            opt.value = c.field; // used in $select
-            opt.textContent = `${c.label} (${c.field})`;
-            plutoColsSelect.appendChild(opt);
-          }
-
-          plutoColsSelect.disabled = false;
-          plutoColsStatus.textContent = `Loaded ${choices.length} PLUTO columns.`;
-        } catch (e) {
-          console.error(e);
-          plutoColsSelect.disabled = true;
-          plutoColsStatus.textContent =
-            "Could not load PLUTO columns automatically (network/CORS). You can still run with addresses only.";
-        }
-      }
-
-      async function run() {
-        resetLog();
-        log("Starting...");
-
-        const boroCode = cleanSpaces(boroSelect.value);
-        boroLabelEl.textContent = boroughLabel(boroCode);
-
-        plutoCountEl.textContent = "—";
-        lienCountEl.textContent = "—";
-        bothCountEl.textContent = "—";
-        latestMonthEl.textContent = "—";
-
-        finalList = [];
-        filterBox.value = "";
-        filterBox.disabled = true;
-        renderList([], "");
-
-        const token = cleanSpaces(document.getElementById("token").value);
-
-        // Selected extra columns (field names)
-        const selectedCols = Array.from(plutoColsSelect?.selectedOptions ?? [])
-          .map(o => cleanSpaces(o.value))
-          .filter(Boolean);
-
-        // 1) PLUTO rows for selected borough (address + zip + selected extra cols)
-        log(`Pulling borough ${boroCode} addresses from PLUTO...`);
-        const plutoFields = ["address", "zipcode", "borocode", ...selectedCols];
-        const plutoSelect = plutoFields.join(",");
-        const plutoWhere  = `borocode='${escapeSocrataStringLiteral(boroCode)}'`;
-
-        const plutoRows = await sodaGetAll(PLUTO_ID, plutoSelect, plutoWhere, token);
-
-        // Map: "ADDRESS ZIP" -> { key, extras: {col: value} }
-        const plutoMap = new Map();
-        for (const r of plutoRows) {
-          const addr = cleanSpaces(r.address);
-          const zip  = normalizeZip(r.zipcode);
-          if (!addr || !zip) continue;
-
-          const key = `${addr} ${zip}`;
-          if (plutoMap.has(key)) continue;
-
-          const extras = {};
-          for (const c of selectedCols) extras[c] = r[c];
-
-          plutoMap.set(key, { key, extras });
-        }
-
-        plutoCountEl.textContent = String(plutoMap.size);
-        log(`Built PLUTO address set: ${plutoMap.size} unique addresses.`);
-
-        // 2) Find latest lien month
-        log("Fetching distinct lien 'month' values...");
-        const distinctMonths = await sodaGetDistinct(LIEN_ID, "month", token);
-
-        const monthValues = [];
-        for (const obj of distinctMonths) {
-          const v = obj.month ?? obj["distinct month"] ?? obj["distinct_month"];
-          if (v) monthValues.push(String(v));
-        }
-        if (monthValues.length === 0) throw new Error("No month values found in lien dataset.");
-
-        let latestMonthRaw = null;
-        let latestMonthDate = null;
-        for (const m of monthValues) {
-          const d = parseDateOrNull(m);
-          if (!d) continue;
-          if (!latestMonthDate || d.getTime() > latestMonthDate.getTime()) {
-            latestMonthDate = d;
-            latestMonthRaw = m;
-          }
-        }
-        if (!latestMonthRaw) throw new Error("Could not parse any month timestamps.");
-
-        latestMonthEl.textContent = latestMonthRaw;
-        log(`Latest lien snapshot month value (raw): ${latestMonthRaw}`);
-
-        // 3) Pull lien rows for latest month snapshot
-        log("Pulling lien addresses for latest month snapshot...");
-        const lienSelect = "house_number,street_name,zip_code,month";
-        const lienWhere  = `month='${escapeSocrataStringLiteral(latestMonthRaw)}'`;
-        const lienRows = await sodaGetAll(LIEN_ID, lienSelect, lienWhere, token);
-        log(`Fetched ${lienRows.length} lien rows for month='${latestMonthRaw}'.`);
-
-        const lienSet = new Set();
-        for (const r of lienRows) {
-          const house  = cleanSpaces(r.house_number);
-          const street = cleanSpaces(r.street_name);
-          const zip    = normalizeZip(r.zip_code);
-          if (house && street && zip) lienSet.add(`${house} ${street} ${zip}`);
-        }
-        lienCountEl.textContent = String(lienSet.size);
-        log(`Built lien address set: ${lienSet.size} unique addresses (latest month).`);
-
-        // 4) Intersection + display extra columns
-        log("Computing intersection (Selected borough ∩ latest lien)...");
-        const both = [];
-
-        for (const a of lienSet) {
-          const rec = plutoMap.get(a);
-          if (!rec) continue;
-
-          let line = a;
-          if (selectedCols.length > 0) {
-            const parts = [];
-            for (const c of selectedCols) {
-              const v = rec.extras?.[c];
-              const txt = cleanSpaces(v);
-              parts.push(`${c}=${txt || "—"}`);
+            function resetLog() { logEl.textContent = ""; }
+            function log(msg) {
+                logEl.textContent += (logEl.textContent.endsWith("\n") || logEl.textContent === "" ? "" : "\n") + msg + "\n";
+                logEl.scrollTop = logEl.scrollHeight;
             }
-            line += " | " + parts.join(" | ");
-          }
-          both.push(line);
-        }
 
-        both.sort();
-        finalList = both;
+            function cleanSpaces(s) {
+                return String(s ?? "").replace(/\s+/g, " ").trim();
+            }
 
-        bothCountEl.textContent = String(finalList.length);
-        log(`Intersection size: ${finalList.length}`);
+            function normalizeZip(z) {
+                const s = cleanSpaces(z);
+                const m = s.match(/(\d{5})/);
+                return m ? m[1] : s;
+            }
 
-        filterBox.disabled = false;
-        renderList(finalList, "");
-        log("Done. Results displayed below.");
-      }
+            function headers(token) {
+                const h = {};
+                if (token) h["X-App-Token"] = token;
+                return h;
+            }
 
-      document.getElementById("runBtn").addEventListener("click", () => {
-        run().catch(err => {
-          log("\nERROR:\n" + (err?.message ?? String(err)));
-          console.error(err);
-          filterBox.disabled = true;
-        });
-      });
+            async function fetchJson(url, token) {
+                const r = await fetch(url, { headers: headers(token) });
+                if (!r.ok) {
+                    const t = await r.text();
+                    throw new Error(`HTTP ${r.status} for ${url}\n${t.slice(0, 1200)}`);
+                }
+                return await r.json();
+            }
 
-      filterBox.addEventListener("input", () => {
-        renderList(finalList, filterBox.value);
-      });
+            async function sodaGetAll(datasetId, select, where, token, limit = 50000) {
+                const rows = [];
+                for (let offset = 0; ; offset += limit) {
+                    const params = new URLSearchParams();
+                    params.set("$select", select);
+                    params.set("$limit", String(limit));
+                    params.set("$offset", String(offset));
+                    if (where) params.set("$where", where);
 
-      boroLabelEl.textContent = boroughLabel(cleanSpaces(boroSelect.value));
-      boroSelect.addEventListener("change", () => {
-        boroLabelEl.textContent = boroughLabel(cleanSpaces(boroSelect.value));
-      });
+                    const url = `${BASE}/${datasetId}.json?${params.toString()}`;
+                    const batch = await fetchJson(url, token);
+                    if (!Array.isArray(batch) || batch.length === 0) break;
 
-      // Populate PLUTO column dropdown on load
-      loadPlutoColumns();
-    })();
-  </script>
+                    rows.push(...batch);
+                    log(`Fetched ${batch.length} rows (offset ${offset}) from ${datasetId}...`);
+                    await new Promise(res => setTimeout(res, 150));
+                }
+                return rows;
+            }
+
+            async function sodaGetDistinct(datasetId, field, token) {
+                const params = new URLSearchParams();
+                params.set("$select", `distinct ${field}`);
+                params.set("$limit", "50000");
+                const url = `${BASE}/${datasetId}.json?${params.toString()}`;
+                return await fetchJson(url, token);
+            }
+
+            function parseDateOrNull(s) {
+                const d = new Date(s);
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            function escapeSocrataStringLiteral(s) {
+                return String(s).replace(/'/g, "''");
+            }
+
+            function boroughLabel(code) {
+                switch (String(code)) {
+                    case "1": return "Manhattan (1)";
+                    case "2": return "Bronx (2)";
+                    case "3": return "Brooklyn (3)";
+                    case "4": return "Queens (4)";
+                    case "5": return "Staten Island (5)";
+                    default: return `BoroCode ${code}`;
+                }
+            }
+
+            function renderList(list, filterText) {
+                const q = cleanSpaces(filterText).toUpperCase();
+                resultsUl.innerHTML = "";
+
+                let shown = 0;
+                const maxRender = 2000;
+
+                for (const item of list) {
+                    if (q && !item.toUpperCase().includes(q)) continue;
+                    if (shown >= maxRender) break;
+
+                    const li = document.createElement("li");
+                    li.textContent = item;
+                    resultsUl.appendChild(li);
+                    shown++;
+                }
+
+                shownCountEl.textContent = String(shown);
+                totalCountEl.textContent = String(list.length);
+
+                if (q && shown === 0) {
+                    const li = document.createElement("li");
+                    li.className = "muted";
+                    li.textContent = "No matches for the current filter.";
+                    resultsUl.appendChild(li);
+                }
+
+                if (shown >= maxRender) {
+                    const li = document.createElement("li");
+                    li.className = "muted";
+                    li.textContent = `Showing first ${maxRender} matches. Narrow the filter to see more.`;
+                    resultsUl.appendChild(li);
+                }
+            }
+
+            function populateColumnsSelect({ selectEl, statusEl, datasetId, baseFieldsToExclude, title }) {
+                // Returns a promise; uses Socrata Views API metadata
+                const url = `https://data.cityofnewyork.us/api/views/${datasetId}.json`;
+
+                return (async () => {
+                    try {
+                        statusEl.textContent = `Loading ${title} columns…`;
+                        selectEl.disabled = true;
+                        selectEl.innerHTML = "";
+
+                        const meta = await fetchJson(url, /*token*/ "");
+                        const cols = Array.isArray(meta.columns) ? meta.columns : [];
+
+                        const exclude = new Set((baseFieldsToExclude ?? []).map(s => String(s).trim()));
+
+                        const choices = cols
+                            .map(c => ({
+                                field: String(c.fieldName ?? "").trim(),
+                                label: String(c.name ?? c.fieldName ?? "").trim()
+                            }))
+                            .filter(c => c.field && !c.field.startsWith(":") && !exclude.has(c.field))
+                            .sort((a, b) => a.label.localeCompare(b.label));
+
+                        for (const c of choices) {
+                            const opt = document.createElement("option");
+                            opt.value = c.field;
+                            opt.textContent = `${c.label} (${c.field})`;
+                            selectEl.appendChild(opt);
+                        }
+
+                        selectEl.disabled = false;
+                        statusEl.textContent = `Loaded ${choices.length} ${title} columns.`;
+                    } catch (e) {
+                        console.error(e);
+                        selectEl.disabled = true;
+                        statusEl.textContent =
+                            `Could not load ${title} columns automatically (network/CORS). You can still run with the default fields.`;
+                    }
+                })();
+            }
+
+            function selectedOptionsValues(selectEl) {
+                return Array.from(selectEl?.selectedOptions ?? [])
+                    .map(o => cleanSpaces(o.value))
+                    .filter(Boolean);
+            }
+
+            async function run() {
+                resetLog();
+                log("Starting...");
+
+                const boroCode = cleanSpaces(boroSelect.value);
+                boroLabelEl.textContent = boroughLabel(boroCode);
+
+                plutoCountEl.textContent = "—";
+                lienCountEl.textContent = "—";
+                bothCountEl.textContent = "—";
+                latestMonthEl.textContent = "—";
+
+                finalList = [];
+                filterBox.value = "";
+                filterBox.disabled = true;
+                renderList([], "");
+
+                const token = cleanSpaces(document.getElementById("token").value);
+
+                // Selected extra columns
+                const plutoExtraCols = selectedOptionsValues(plutoColsSelect);
+                const lienExtraCols = selectedOptionsValues(lienColsSelect);
+
+                // 1) PLUTO rows for selected borough (address + zip + selected extra cols)
+                log(`Pulling borough ${boroCode} addresses from PLUTO...`);
+                const plutoFields = ["address", "zipcode", "borocode", ...plutoExtraCols];
+                const plutoSelect = plutoFields.join(",");
+                const plutoWhere = `borocode='${escapeSocrataStringLiteral(boroCode)}'`;
+
+                const plutoRows = await sodaGetAll(PLUTO_ID, plutoSelect, plutoWhere, token);
+
+                // Map: "ADDRESS ZIP" -> { key, extras }
+                const plutoMap = new Map();
+                for (const r of plutoRows) {
+                    const addr = cleanSpaces(r.address);
+                    const zip = normalizeZip(r.zipcode);
+                    if (!addr || !zip) continue;
+
+                    const key = `${addr} ${zip}`;
+                    if (plutoMap.has(key)) continue;
+
+                    const extras = {};
+                    for (const c of plutoExtraCols) extras[c] = r[c];
+
+                    plutoMap.set(key, { key, extras });
+                }
+
+                plutoCountEl.textContent = String(plutoMap.size);
+                log(`Built PLUTO address set: ${plutoMap.size} unique addresses.`);
+
+                // 2) Find latest lien month
+                log("Fetching distinct lien 'month' values...");
+                const distinctMonths = await sodaGetDistinct(LIEN_ID, "month", token);
+
+                const monthValues = [];
+                for (const obj of distinctMonths) {
+                    const v = obj.month ?? obj["distinct month"] ?? obj["distinct_month"];
+                    if (v) monthValues.push(String(v));
+                }
+                if (monthValues.length === 0) throw new Error("No month values found in lien dataset.");
+
+                let latestMonthRaw = null;
+                let latestMonthDate = null;
+                for (const m of monthValues) {
+                    const d = parseDateOrNull(m);
+                    if (!d) continue;
+                    if (!latestMonthDate || d.getTime() > latestMonthDate.getTime()) {
+                        latestMonthDate = d;
+                        latestMonthRaw = m;
+                    }
+                }
+                if (!latestMonthRaw) throw new Error("Could not parse any month timestamps.");
+
+                latestMonthEl.textContent = latestMonthRaw;
+                log(`Latest lien snapshot month value (raw): ${latestMonthRaw}`);
+
+                // 3) Pull lien rows for latest month snapshot (default key fields + selected extra cols)
+                log("Pulling lien rows for latest month snapshot...");
+                const lienFields = ["house_number", "street_name", "zip_code", "month", ...lienExtraCols];
+                const lienSelect = Array.from(new Set(lienFields)).join(","); // de-dup
+                const lienWhere = `month='${escapeSocrataStringLiteral(latestMonthRaw)}'`;
+
+                const lienRows = await sodaGetAll(LIEN_ID, lienSelect, lienWhere, token);
+                log(`Fetched ${lienRows.length} lien rows for month='${latestMonthRaw}'.`);
+
+                // Map: "HOUSE STREET ZIP" -> { key, extras }
+                const lienMap = new Map();
+                for (const r of lienRows) {
+                    const house = cleanSpaces(r.house_number);
+                    const street = cleanSpaces(r.street_name);
+                    const zip = normalizeZip(r.zip_code);
+                    if (!house || !street || !zip) continue;
+
+                    const key = `${house} ${street} ${zip}`;
+                    if (lienMap.has(key)) continue;
+
+                    const extras = {};
+                    for (const c of lienExtraCols) extras[c] = r[c];
+
+                    lienMap.set(key, { key, extras });
+                }
+
+                lienCountEl.textContent = String(lienMap.size);
+                log(`Built lien address set: ${lienMap.size} unique addresses (latest month).`);
+
+                // 4) Intersection + display selected extra columns from both datasets
+                log("Computing intersection (Selected borough ∩ latest lien)...");
+                const both = [];
+
+                for (const [key, lienRec] of lienMap.entries()) {
+                    const plutoRec = plutoMap.get(key);
+                    if (!plutoRec) continue;
+
+                    let line = key;
+
+                    const parts = [];
+
+                    if (plutoExtraCols.length > 0) {
+                        for (const c of plutoExtraCols) {
+                            const txt = cleanSpaces(plutoRec.extras?.[c]);
+                            parts.push(`pluto.${c}=${txt || "—"}`);
+                        }
+                    }
+
+                    if (lienExtraCols.length > 0) {
+                        for (const c of lienExtraCols) {
+                            const txt = cleanSpaces(lienRec.extras?.[c]);
+                            parts.push(`lien.${c}=${txt || "—"}`);
+                        }
+                    }
+
+                    if (parts.length > 0) line += " | " + parts.join(" | ");
+
+                    both.push(line);
+                }
+
+                both.sort();
+                finalList = both;
+
+                bothCountEl.textContent = String(finalList.length);
+                log(`Intersection size: ${finalList.length}`);
+
+                filterBox.disabled = false;
+                renderList(finalList, "");
+                log("Done. Results displayed below.");
+            }
+
+            document.getElementById("runBtn").addEventListener("click", () => {
+                run().catch(err => {
+                    log("\nERROR:\n" + (err?.message ?? String(err)));
+                    console.error(err);
+                    filterBox.disabled = true;
+                });
+            });
+
+            filterBox.addEventListener("input", () => {
+                renderList(finalList, filterBox.value);
+            });
+
+            boroLabelEl.textContent = boroughLabel(cleanSpaces(boroSelect.value));
+            boroSelect.addEventListener("change", () => {
+                boroLabelEl.textContent = boroughLabel(cleanSpaces(boroSelect.value));
+            });
+
+            // Populate both schema dropdowns on load
+            populateColumnsSelect({
+                selectEl: plutoColsSelect,
+                statusEl: plutoColsStatus,
+                datasetId: PLUTO_ID,
+                baseFieldsToExclude: ["address", "zipcode", "borocode"],
+                title: "PLUTO"
+            });
+
+            populateColumnsSelect({
+                selectEl: lienColsSelect,
+                statusEl: lienColsStatus,
+                datasetId: LIEN_ID,
+                baseFieldsToExclude: ["house_number", "street_name", "zip_code", "month"],
+                title: "Tax Lien"
+            });
+})();
+    </script>
 </body>
 </html>
