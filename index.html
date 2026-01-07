@@ -72,6 +72,11 @@
         .muted {
             color: #666;
         }
+
+        .inline {
+            display: inline-block;
+            margin-right: 14px;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +106,17 @@
                         <option value="5" selected>Staten Island (BoroCode 5)</option>
                     </select>
                 </label>
+            </div>
+
+            <div class="row">
+                <label>
+                    Tax Class Code filter (from lien dataset; applied after borough filter):
+                    <br />
+                    <select id="taxClassFilter" disabled>
+                        <option value="">All tax classes</option>
+                    </select>
+                </label>
+                <div class="small muted" id="taxClassStatus">Loading tax class codes…</div>
             </div>
 
             <div class="row">
@@ -172,6 +188,10 @@
             const PLUTO_ID = "64uk-42ks"; // PLUTO
             const LIEN_ID = "9rz4-mjek"; // DOF Tax Lien Sale Lists
 
+            // IMPORTANT: update this if the lien dataset uses a different field name.
+            // The dropdown is auto-populated from distinct values for this field.
+            const LIEN_TAX_CLASS_FIELD = "tax_class_code";
+
             const logEl = document.getElementById("log");
             const boroSelect = document.getElementById("boroughSelect");
             const boroLabelEl = document.getElementById("boroLabel");
@@ -190,6 +210,9 @@
 
             const lienColsSelect = document.getElementById("lienCols");
             const lienColsStatus = document.getElementById("lienColsStatus");
+
+            const taxClassFilter = document.getElementById("taxClassFilter");
+            const taxClassStatus = document.getElementById("taxClassStatus");
 
             let finalList = [];
 
@@ -308,7 +331,6 @@
             }
 
             function populateColumnsSelect({ selectEl, statusEl, datasetId, baseFieldsToExclude, title }) {
-                // Returns a promise; uses Socrata Views API metadata
                 const url = `https://data.cityofnewyork.us/api/views/${datasetId}.json`;
 
                 return (async () => {
@@ -354,6 +376,56 @@
                     .filter(Boolean);
             }
 
+            async function loadTaxClassCodes() {
+                // Populates the Tax Class filter dropdown using distinct values from the lien dataset.
+                // This is intentionally independent of borough; the filter is applied later during lien query.
+                try {
+                    taxClassStatus.textContent = "Loading tax class codes…";
+                    taxClassFilter.disabled = true;
+
+                    // Keep existing "All tax classes" option
+                    taxClassFilter.innerHTML = `<option value="">All tax classes</option>`;
+
+                    const token = cleanSpaces(document.getElementById("token").value);
+
+                    const distinct = await sodaGetDistinct(LIEN_ID, LIEN_TAX_CLASS_FIELD, token);
+
+                    // Extract values; Socrata returns objects like { tax_class_code: "1" }
+                    const vals = [];
+                    for (const obj of distinct) {
+                        const v = obj[LIEN_TAX_CLASS_FIELD];
+                        const s = cleanSpaces(v);
+                        if (s) vals.push(s);
+                    }
+
+                    // De-dup & sort (numeric-first if possible)
+                    const uniq = Array.from(new Set(vals));
+                    uniq.sort((a, b) => {
+                        const na = Number(a), nb = Number(b);
+                        const aNum = Number.isFinite(na), bNum = Number.isFinite(nb);
+                        if (aNum && bNum) return na - nb;
+                        if (aNum && !bNum) return -1;
+                        if (!aNum && bNum) return 1;
+                        return a.localeCompare(b);
+                    });
+
+                    for (const v of uniq) {
+                        const opt = document.createElement("option");
+                        opt.value = v;
+                        opt.textContent = v;
+                        taxClassFilter.appendChild(opt);
+                    }
+
+                    taxClassFilter.disabled = false;
+                    taxClassStatus.textContent = `Loaded ${uniq.length} tax class code values.`;
+                } catch (e) {
+                    console.error(e);
+                    taxClassFilter.disabled = true;
+                    taxClassStatus.textContent =
+                        `Could not load tax class codes automatically. You can still run (no tax class filtering).`;
+                }
+            }
+
             async function run() {
                 resetLog();
                 log("Starting...");
@@ -376,6 +448,9 @@
                 // Selected extra columns
                 const plutoExtraCols = selectedOptionsValues(plutoColsSelect);
                 const lienExtraCols = selectedOptionsValues(lienColsSelect);
+
+                // Selected tax class filter value (optional)
+                const taxClassValue = cleanSpaces(taxClassFilter.value);
 
                 // 1) PLUTO rows for selected borough (address + zip + selected extra cols)
                 log(`Pulling borough ${boroCode} addresses from PLUTO...`);
@@ -430,16 +505,28 @@
                 latestMonthEl.textContent = latestMonthRaw;
                 log(`Latest lien snapshot month value (raw): ${latestMonthRaw}`);
 
-                // 3) Pull lien rows for latest month snapshot (default key fields + selected extra cols)
+                // 3) Pull lien rows for latest month snapshot, then apply tax class filter (after borough filter)
+                // Borough filter is implicitly applied by intersecting with PLUTO (borough-specific) after we fetch liens.
+                // Tax class filter is applied while fetching lien rows to reduce volume.
                 log("Pulling lien rows for latest month snapshot...");
-                const lienFields = ["house_number", "street_name", "zip_code", "month", ...lienExtraCols];
+
+                const lienFields = ["house_number", "street_name", "zip_code", "month", LIEN_TAX_CLASS_FIELD, ...lienExtraCols];
                 const lienSelect = Array.from(new Set(lienFields)).join(","); // de-dup
-                const lienWhere = `month='${escapeSocrataStringLiteral(latestMonthRaw)}'`;
+
+                // Build WHERE: month='...' AND optionally tax_class_code='...'
+                const whereParts = [`month='${escapeSocrataStringLiteral(latestMonthRaw)}'`];
+                if (taxClassValue) {
+                    whereParts.push(`${LIEN_TAX_CLASS_FIELD}='${escapeSocrataStringLiteral(taxClassValue)}'`);
+                    log(`Applying tax class filter: ${LIEN_TAX_CLASS_FIELD}='${taxClassValue}'`);
+                } else {
+                    log("Tax class filter: All tax classes");
+                }
+                const lienWhere = whereParts.join(" AND ");
 
                 const lienRows = await sodaGetAll(LIEN_ID, lienSelect, lienWhere, token);
-                log(`Fetched ${lienRows.length} lien rows for month='${latestMonthRaw}'.`);
+                log(`Fetched ${lienRows.length} lien rows for the selected filters.`);
 
-                // Map: "HOUSE STREET ZIP" -> { key, extras }
+                // Map: "HOUSE STREET ZIP" -> { key, extras, taxClass }
                 const lienMap = new Map();
                 for (const r of lienRows) {
                     const house = cleanSpaces(r.house_number);
@@ -453,14 +540,15 @@
                     const extras = {};
                     for (const c of lienExtraCols) extras[c] = r[c];
 
-                    lienMap.set(key, { key, extras });
+                    lienMap.set(key, { key, extras, taxClass: cleanSpaces(r[LIEN_TAX_CLASS_FIELD]) });
                 }
 
                 lienCountEl.textContent = String(lienMap.size);
-                log(`Built lien address set: ${lienMap.size} unique addresses (latest month).`);
+                log(`Built lien address set: ${lienMap.size} unique addresses (latest month + tax class filter).`);
 
-                // 4) Intersection + display selected extra columns from both datasets
-                log("Computing intersection (Selected borough ∩ latest lien)...");
+                // 4) Intersection with borough-filtered PLUTO + display selected extra columns from both datasets
+                // This is where the borough filter is effectively applied (PLUTO is borough-scoped).
+                log("Computing intersection (Selected borough ∩ filtered liens)...");
                 const both = [];
 
                 for (const [key, lienRec] of lienMap.entries()) {
@@ -471,6 +559,10 @@
 
                     const parts = [];
 
+                    // Always show tax class if present (since user is filtering on it)
+                    const tc = cleanSpaces(lienRec.taxClass);
+                    if (tc) parts.push(`lien.${LIEN_TAX_CLASS_FIELD}=${tc}`);
+
                     if (plutoExtraCols.length > 0) {
                         for (const c of plutoExtraCols) {
                             const txt = cleanSpaces(plutoRec.extras?.[c]);
@@ -480,6 +572,8 @@
 
                     if (lienExtraCols.length > 0) {
                         for (const c of lienExtraCols) {
+                            // Avoid duplicating tax class if the user selected it as an extra col
+                            if (c === LIEN_TAX_CLASS_FIELD) continue;
                             const txt = cleanSpaces(lienRec.extras?.[c]);
                             parts.push(`lien.${c}=${txt || "—"}`);
                         }
@@ -518,7 +612,7 @@
                 boroLabelEl.textContent = boroughLabel(cleanSpaces(boroSelect.value));
             });
 
-            // Populate both schema dropdowns on load
+            // Populate schema dropdowns on load
             populateColumnsSelect({
                 selectEl: plutoColsSelect,
                 statusEl: plutoColsStatus,
@@ -534,6 +628,10 @@
                 baseFieldsToExclude: ["house_number", "street_name", "zip_code", "month"],
                 title: "Tax Lien"
             });
+
+            // Load tax class codes on load, and reload when token changes (optional)
+            loadTaxClassCodes();
+            document.getElementById("token").addEventListener("change", () => loadTaxClassCodes());
 })();
     </script>
 </body>
